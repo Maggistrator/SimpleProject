@@ -27,21 +27,20 @@ public class Player extends Entity{
 	private final String UP = "up";
 	private final String DOWN = "down";
 	private final String ATTACK = "attack";
-	
-	//переключатель обновления кулдауна
-	private boolean isCooldown = false;
-	
+		
 	//Базовые статы
 	//здоровье 
 	public float health = 100;	
 	//коэффициент защиты, ослабляет итоговый урон врага
-	public float defence = 0.1f;
+	public float defence = 0.3f;
 	//коэффициет атаки, усиливает ваш урон
 	public float atack = 0.1f;	
 	//урон, теоретически должен зависеть от оружия
 	public float damage = 10;
 	
-	//переменная счетчика кулдауна
+	//переключатель обновления кулдауна
+	private boolean isCooldown = false;
+	//счетчик кулдауна
 	private int cooldown = 0;
 	
 	public static String ENEMY = "enemy";
@@ -52,22 +51,22 @@ public class Player extends Entity{
 	public Player(float x, float y) throws SlickException {
 		super(x, y);
 		//Заявляем размеры сущности
-		width = 20;
-		height = 40;
+		width = 40;
+		height = 58;
 		//Объявляем спрайтлисты
-		SpriteSheet sheet_hit = new SpriteSheet("textures/hit.png",width,height);
-		SpriteSheet sheet_left = new SpriteSheet("textures/left.png",width,height);
-		SpriteSheet sheet_right = new SpriteSheet("textures/right.png",width,height);
-		SpriteSheet sheet_up = new SpriteSheet("textures/up.png",width,height);
-		SpriteSheet sheet_down = new SpriteSheet("textures/down.png",width,height);
-		SpriteSheet sheet_wounded = new SpriteSheet("textures/wounded.png",width,height);
-		setGraphic(new Image("D:/Data/player.png"));
+		SpriteSheet sheet_hit = new SpriteSheet("textures/char.png",width,height);
+		SpriteSheet sheet_left = new SpriteSheet("textures/char.png",width,height);
+		SpriteSheet sheet_right = new SpriteSheet("textures/char.png",width,height);
+		SpriteSheet sheet_up = new SpriteSheet("textures/char.png",width,height);
+		SpriteSheet sheet_down = new SpriteSheet("textures/char.png",width,height);
+		SpriteSheet sheet_wounded = new SpriteSheet("textures/char.png",width,height);
+		setGraphic(new Image("D:/Data/char.png"));
 		//Создаем анимацию через массив изображений
 		Image[] arr_calm = {
-				new Image("textures/calm.png"), 
-				new Image("textures/scratching_ass1.png"),
-				new Image("textures/scratching_ass2.png"),
-				new Image("textures/scratching_ass3.png")};
+				new Image("textures/char.png"), 
+				new Image("textures/char.png"),
+				new Image("textures/char.png"),
+				new Image("textures/char.png")};
 		//Регистрация анимаций
 		addAnimation(ANIM_CALM, new Animation(arr_calm, 40));
 		addAnimation(ANIM_HIT, new Animation(sheet_hit, 40));
@@ -111,7 +110,6 @@ public class Player extends Entity{
 			setAnim(ANIM_DOWN); 
 			y++;
 		}
-		else if(check(ATTACK)&&checkEnemy()!=null) hit(checkEnemy());
 		else setAnim(ANIM_CALM);
 		//Если персонаж атакует..
 		if(check(ATTACK)) {
@@ -132,18 +130,19 @@ public class Player extends Entity{
 		if(isCooldown) {
 			if (cooldown > 0) cooldown--;
 			else isCooldown = false;
-		}}
+		}
+		}
 	}
 	
 	/**поиск противников вокруг игрока*/
 	//TODO: переписать в checkTarget, для взаимодействия с миром
 	private Enemy checkEnemy() {
 		Entity enemy = null;
-		if(collide(ENEMY, x+2, y)!=null) enemy = collide(ENEMY, x+2, y);
-		if(collide(ENEMY, x-2, y)!=null) enemy = collide(ENEMY, x-2, y);
+		if(collide(ENEMY, x+4, y)!=null) enemy = collide(ENEMY, x+4, y);
+		if(collide(ENEMY, x-4, y)!=null) enemy = collide(ENEMY, x-4, y);
 		//мы не ниндзя, чтобы бить назад
 		//if(collide(ENEMY, x, y+2)!=null) enemy = collide(ENEMY, x, y+2);
-		if(collide(ENEMY, x, y-2)!=null) enemy = collide(ENEMY, x, y-2);			
+		if(collide(ENEMY, x, y-4)!=null) enemy = collide(ENEMY, x, y-4);			
 		if(enemy!=null)return (Enemy) enemy;
 		else return null;
 	} 

@@ -3,15 +3,18 @@ package code;
 import org.newdawn.slick.Animation;
 import org.newdawn.slick.GameContainer;
 import org.newdawn.slick.Image;
-import org.newdawn.slick.Input;
 import org.newdawn.slick.SlickException;
 import org.newdawn.slick.SpriteSheet;
 
 import it.marteEngine.entity.Entity;
 
+/**
+ * по-сути, копи€ player, но с автоуправлением
+ * этого можно добитьс€ грамотным наследованием, 
+ * но в цел€х нагл€дности использовано дублирование
+ * */
 public class Enemy extends Entity{
-	//ƒольше, но использовать константы - добро
-	// онстанты анимаций
+ 
 	public static final String ANIM_HIT = "anim_hit";
 	public static final String ANIM_LEFT = "anim_left";
 	public static final String ANIM_RIGHT = "anim_right";
@@ -21,23 +24,22 @@ public class Enemy extends Entity{
 	public static final String ANIM_DEATH = "anim_death";
 	public static final String ANIM_WOUNDED = "anim_wouded";
 	
-	// онстанты передвижени€ дл€ ввода
+	// онстанты направлени€ дл€ автоматики
 	private final String LEFT = "left";
 	private final String RIGHT = "right";
 	private final String UP = "up";
 	private final String DOWN = "down";
-	private final String ATTACK = "attack";
 	
 	//переключатель обновлени€ кулдауна
 	private boolean isCooldown = false;
 	
 	//Ѕазовые статы
 	//здоровье 
-	public float health = 100;	
+	public float health = 60;	
 	//коэффициент защиты, ослабл€ет итоговый урон врага
 	public float defence = 0.1f;
 	//коэффициет атаки, усиливает ваш урон
-	public float atack = 0.1f;	
+	public float atack = 0.2f;	
 	//урон, теоретически должен зависеть от оружи€
 	public float damage = 10;
 	
@@ -45,6 +47,14 @@ public class Enemy extends Entity{
 	private int cooldown = 0;
 	
 	public static String ENEMY = "enemy";
+	
+	public final String STRATEGY_PATROL = "patrol";
+	private Strategy strategy = null;
+	
+	private float newx = x;
+	private float newy = y;
+	
+	Player target;
 	
 	//персонаж жив (или нет)
 	public boolean isAlive = true;
@@ -80,6 +90,7 @@ public class Enemy extends Entity{
 		//в данном случае, управление автоматическое, клавиш не задаЄтс€
 		//«адаЄм тип сущности, чтобы различать их при обнаружении столкновений
 		addType(ENEMY);
+		setStrategy(new PatrolStrategy(this));
 		//«адаЄм область дл€ обнаружени€ столновений
 		setHitBox(0, 0, width, height);
 		}
@@ -87,42 +98,25 @@ public class Enemy extends Entity{
 	@Override
 	public void update(GameContainer container, int delta) throws SlickException {
 		super.update(container, delta);
-		//пока персонаж жив, его логика обновл€етс€
 		if(isAlive) {
-		//ѕеремещение
-		if(check(LEFT)&&collide(SOLID, x-2, y)==null) {
-			setAnim(ANIM_LEFT); 
-			x--;
+		//если есть путева€ точка - следуем к ней
+
+		if(checkPlayer()==null) {
+		if(newx<x) move(LEFT); else move(RIGHT);
+		if(newy<y) move(UP); else move(DOWN);
 		}
-		else if(check(RIGHT)&&collide(SOLID, x+width+2, y)==null){
-			setAnim(ANIM_RIGHT); 
-			x++;
+		
+		strategy.act();
+		
+		//если протагонист р€дом - атакуем его
+		if(cooldown<=0) {
+			target = checkPlayer();
+			if(target!=null) hit(target);
+			cooldown = 50;
+			isCooldown = true;
 		}
-		else if(check(UP)&&collide(SOLID, x, y-2)==null) {
-			setAnim(ANIM_UP); 
-			y--;
-		}		
-		else if(check(DOWN)&&collide(SOLID, x, y+height+2)==null) {
-			setAnim(ANIM_DOWN); 
-			y++;
-		}
-		else if(check(ATTACK)&&checkEnemy()!=null) hit(checkEnemy());
-		else setAnim(ANIM_CALM);
-		//≈сли персонаж атакует..
-		if(check(ATTACK)) {
-			//..и кулдаун ему это позвол€ет..
-			if (cooldown <= 0) {
-				//..мы ищем врага в области дос€гаемости..
-				Enemy enemy = checkEnemy();
-				//..и если таковой имеетс€, всыпаем ему
-				if (enemy != null) {
-					hit(enemy);
-				}
-				//удар нанесЄн, устанавливаем кулдаун
-				isCooldown = true;
-				cooldown = 50;
-			}
-		}
+		//вызов стратегии бота
+		
 		//это условие управл€ет обновлением кулдауна
 		if(isCooldown) {
 			if (cooldown > 0) cooldown--;
@@ -130,32 +124,67 @@ public class Enemy extends Entity{
 		}}
 	}
 	
-	/**поиск противников вокруг игрока*/
-	//TODO: переписать в checkTarget, дл€ взаимодействи€ с миром
-	private Enemy checkEnemy() {
-		Entity enemy = null;
-		if(collide(ENEMY, x+2, y)!=null) enemy = collide(ENEMY, x+2, y);
-		if(collide(ENEMY, x-2, y)!=null) enemy = collide(ENEMY, x-2, y);
+	protected Player checkPlayer() {
+		Entity player = null;
+		if(collide(PLAYER, x+2, y)!=null) player = collide(PLAYER, x+2, y);
+		if(collide(PLAYER, x-2, y)!=null) player = collide(PLAYER, x-2, y);
 		//мы не ниндз€, чтобы бить назад
-		//if(collide(ENEMY, x, y+2)!=null) enemy = collide(ENEMY, x, y+2);
-		if(collide(ENEMY, x, y-2)!=null) enemy = collide(ENEMY, x, y-2);			
-		if(enemy!=null)return (Enemy) enemy;
+		//if(collide(PLAYER, x, y+2)!=null) player = collide(PLAYER, x, y+2);
+		if(collide(PLAYER, x, y-2)!=null) player = collide(PLAYER, x, y-2);			
+		if(player!=null)return (Player) player;
 		else return null;
 	} 
 	
-	private void hit(Enemy enemy) {
+	private void hit(Player player) {
 		setAnim(ANIM_HIT);
 		//вычислим урон с учЄтом модификатора атаки
 		float real_damage = this.damage + (this.damage * this.atack);
 		//вычислим урон ослабленный модификатором защиты противника
-		float reduced_damage = real_damage - (real_damage * enemy.defence); 
+		float reduced_damage = real_damage - (real_damage * player.defence); 
 		//вычтем из жизни противника
-		enemy.health -= reduced_damage;
-		if(enemy.health>0) enemy.setAnim(ANIM_WOUNDED);
+		player.health -= reduced_damage;
+		if(player.health>0) player.setAnim(ANIM_WOUNDED);
 		else {
 			setAnim(ANIM_DEATH);
 			isAlive = false;
 		}
+	}
+	
+	public void move(float x, float y) {
+		newx = x; newy = y;
+	}
+	
+	private void move(String dir) {
+		switch(dir) {
+		case LEFT:
+			if(collide(SOLID, x-2, y)==null) {
+				setAnim(ANIM_LEFT); 
+				x--;
+			}
+			break;
+		case RIGHT:
+			if(collide(SOLID, x+width+2, y)==null){
+				setAnim(ANIM_RIGHT); 
+				x++;
+			}
+			break;
+		case UP:
+			if(collide(SOLID, x, y-2)==null) {
+				setAnim(ANIM_UP); 
+				y--;
+			}		
+			break;
+		case DOWN:
+			if(collide(SOLID, x, y+height+2)==null) {
+				setAnim(ANIM_DOWN); 
+				y++;
+			}
+			break;
+		}
+	}
+	
+	public void setStrategy(Strategy strategy) {
+		this.strategy = strategy;
 	}
 	
 	@Override
