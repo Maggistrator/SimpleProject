@@ -1,4 +1,4 @@
-package code;
+package core;
 
 public interface Strategy {
 

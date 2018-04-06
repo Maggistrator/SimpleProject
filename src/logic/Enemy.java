@@ -1,11 +1,15 @@
-package code;
+package logic;
 
 import org.newdawn.slick.Animation;
 import org.newdawn.slick.GameContainer;
+import org.newdawn.slick.Graphics;
 import org.newdawn.slick.Image;
 import org.newdawn.slick.SlickException;
 import org.newdawn.slick.SpriteSheet;
+import org.newdawn.slick.geom.Rectangle;
 
+import ai.strategies.PatrolStrategy;
+import core.Strategy;
 import it.marteEngine.entity.Entity;
 
 /**
@@ -31,7 +35,7 @@ public class Enemy extends Entity{
 	private final String DOWN = "down";
 	
 	//переключатель обновления кулдауна
-	private boolean isCooldown = false;
+	public boolean isCooldown = false;
 	
 	//Базовые статы
 	//здоровье 
@@ -41,10 +45,10 @@ public class Enemy extends Entity{
 	//коэффициет атаки, усиливает ваш урон
 	public float atack = 0.2f;	
 	//урон, теоретически должен зависеть от оружия
-	public float damage = 10;
+	public float damage = 4;
 	
 	//переменная счетчика кулдауна
-	private int cooldown = 0;
+	public int cooldown = 0;
 	
 	public static String ENEMY = "enemy";
 	
@@ -54,7 +58,9 @@ public class Enemy extends Entity{
 	private float newx = x;
 	private float newy = y;
 	
-	Player target;
+	public Player target;
+	//графическое представление хитбокса
+	Rectangle rect;
 	
 	//персонаж жив (или нет)
 	public boolean isAlive = true;
@@ -62,22 +68,23 @@ public class Enemy extends Entity{
 	public Enemy(float x, float y) throws SlickException {
 		super(x, y);
 		//Заявляем размеры сущности
-		width = 20;
-		height = 40;
+		width = 48;
+		height = 58;
 		//Объявляем спрайтлисты
-		SpriteSheet sheet_hit = new SpriteSheet("textures/hit.png",width,height);
-		SpriteSheet sheet_left = new SpriteSheet("textures/left.png",width,height);
-		SpriteSheet sheet_right = new SpriteSheet("textures/right.png",width,height);
-		SpriteSheet sheet_up = new SpriteSheet("textures/up.png",width,height);
-		SpriteSheet sheet_down = new SpriteSheet("textures/down.png",width,height);
-		SpriteSheet sheet_wounded = new SpriteSheet("textures/wounded.png",width,height);
-		setGraphic(new Image("D:/Data/player.png"));
+		SpriteSheet sheet_hit = new SpriteSheet("textures/char.png",width,height);
+		SpriteSheet sheet_left = new SpriteSheet("textures/char.png",width,height);
+		SpriteSheet sheet_right = new SpriteSheet("textures/char.png",width,height);
+		SpriteSheet sheet_up = new SpriteSheet("textures/char.png",width,height);
+		SpriteSheet sheet_down = new SpriteSheet("textures/char.png",width,height);
+		SpriteSheet sheet_wounded = new SpriteSheet("textures/char.png",width,height);
+		SpriteSheet sheet_death = new SpriteSheet("textures/char.png",width,height);
+		setGraphic(new Image("textures/char.png"));
 		//Создаем анимацию через массив изображений
 		Image[] arr_calm = {
-				new Image("textures/calm.png"), 
-				new Image("textures/scratching_ass1.png"),
-				new Image("textures/scratching_ass2.png"),
-				new Image("textures/scratching_ass3.png")};
+				new Image("textures/char.png"), 
+				new Image("textures/char.png"),
+				new Image("textures/char.png"),
+				new Image("textures/char.png")};
 		//Регистрация анимаций
 		addAnimation(ANIM_CALM, new Animation(arr_calm, 40));
 		addAnimation(ANIM_HIT, new Animation(sheet_hit, 40));
@@ -86,6 +93,7 @@ public class Enemy extends Entity{
 		addAnimation(ANIM_UP, new Animation(sheet_up, 40));
 		addAnimation(ANIM_DOWN, new Animation(sheet_down, 40));
 		addAnimation(ANIM_WOUNDED, new Animation(sheet_wounded, 40));
+		addAnimation(ANIM_DEATH, new Animation(sheet_death, 40));
 		setAnim(ANIM_CALM);
 		//в данном случае, управление автоматическое, клавиш не задаётся
 		//Задаём тип сущности, чтобы различать их при обнаружении столкновений
@@ -93,6 +101,8 @@ public class Enemy extends Entity{
 		setStrategy(new PatrolStrategy(this));
 		//Задаём область для обнаружения столновений
 		setHitBox(0, 0, width, height);
+		//клон хитбокса
+		rect = new Rectangle(0, 0, width, height);
 		}
 	
 	@Override
@@ -102,29 +112,23 @@ public class Enemy extends Entity{
 		//если есть путевая точка - следуем к ней
 
 		if(checkPlayer()==null) {
-		if(newx<x) move(LEFT); else move(RIGHT);
-		if(newy<y) move(UP); else move(DOWN);
+		if(newx<x) move(LEFT); else if(newx>x) move(RIGHT);
+		if(newy<y) move(UP); else if(newy>y) move(DOWN);
 		}
 		
-		strategy.act();
-		
-		//если протагонист рядом - атакуем его
-		if(cooldown<=0) {
-			target = checkPlayer();
-			if(target!=null) hit(target);
-			cooldown = 50;
-			isCooldown = true;
-		}
 		//вызов стратегии бота
+		strategy.act();
 		
 		//это условие управляет обновлением кулдауна
 		if(isCooldown) {
 			if (cooldown > 0) cooldown--;
 			else isCooldown = false;
 		}}
+		rect.setX(x);
+		rect.setY(y);
 	}
 	
-	protected Player checkPlayer() {
+	public Player checkPlayer() {
 		Entity player = null;
 		if(collide(PLAYER, x+2, y)!=null) player = collide(PLAYER, x+2, y);
 		if(collide(PLAYER, x-2, y)!=null) player = collide(PLAYER, x-2, y);
@@ -135,7 +139,7 @@ public class Enemy extends Entity{
 		else return null;
 	} 
 	
-	private void hit(Player player) {
+	public void hit(Player player) {
 		setAnim(ANIM_HIT);
 		//вычислим урон с учётом модификатора атаки
 		float real_damage = this.damage + (this.damage * this.atack);
@@ -145,8 +149,8 @@ public class Enemy extends Entity{
 		player.health -= reduced_damage;
 		if(player.health>0) player.setAnim(ANIM_WOUNDED);
 		else {
-			setAnim(ANIM_DEATH);
-			isAlive = false;
+			player.setAnim(ANIM_DEATH);
+			player.isAlive = false;
 		}
 	}
 	
@@ -193,5 +197,12 @@ public class Enemy extends Entity{
 		//чтобы анимации по-умлчнию не зацикливались, это важно
 		animation.setLooping(false);
 		super.addAnimation(animName, animation);
+	}
+	
+	@Override
+	public void render(GameContainer container, Graphics g) throws SlickException {
+		super.render(container, g);
+		g.drawString((int)health+"", x, y+height);
+		g.draw(rect);
 	}
 }

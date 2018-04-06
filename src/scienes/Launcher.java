@@ -1,4 +1,4 @@
-package code;
+package scienes;
 
 import org.newdawn.slick.AppGameContainer;
 import org.newdawn.slick.GameContainer;

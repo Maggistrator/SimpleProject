@@ -1,11 +1,13 @@
-package code;
+package logic;
 
 import org.newdawn.slick.Animation;
 import org.newdawn.slick.GameContainer;
+import org.newdawn.slick.Graphics;
 import org.newdawn.slick.Image;
 import org.newdawn.slick.Input;
 import org.newdawn.slick.SlickException;
 import org.newdawn.slick.SpriteSheet;
+import org.newdawn.slick.geom.Rectangle;
 
 import it.marteEngine.entity.Entity;
 
@@ -48,6 +50,9 @@ public class Player extends Entity{
 	//персонаж жив (или нет)
 	public boolean isAlive = true;
 
+	//графическое представление хитбокса
+	Rectangle rect;
+
 	public Player(float x, float y) throws SlickException {
 		super(x, y);
 		//Заявляем размеры сущности
@@ -60,7 +65,8 @@ public class Player extends Entity{
 		SpriteSheet sheet_up = new SpriteSheet("textures/char.png",width,height);
 		SpriteSheet sheet_down = new SpriteSheet("textures/char.png",width,height);
 		SpriteSheet sheet_wounded = new SpriteSheet("textures/char.png",width,height);
-		setGraphic(new Image("D:/Data/char.png"));
+		SpriteSheet sheet_death = new SpriteSheet("textures/char.png",width,height);
+		setGraphic(new Image("textures/char.png"));
 		//Создаем анимацию через массив изображений
 		Image[] arr_calm = {
 				new Image("textures/char.png"), 
@@ -75,38 +81,45 @@ public class Player extends Entity{
 		addAnimation(ANIM_UP, new Animation(sheet_up, 40));
 		addAnimation(ANIM_DOWN, new Animation(sheet_down, 40));
 		addAnimation(ANIM_WOUNDED, new Animation(sheet_wounded, 40));
+		addAnimation(ANIM_DEATH, new Animation(sheet_death, 40));
+		addAnimation(ANIM_DEATH, new Animation(sheet_death, 40));
 		setAnim(ANIM_CALM);
 		//создаем быстрые клавиши для управления
-		define("RIGHT", Input.KEY_D);
-		define("LEFT", Input.KEY_A);
-		define("UP", Input.KEY_W);
-		define("DOWN", Input.KEY_S);
-		define("ATTACK", Input.MOUSE_LEFT_BUTTON);
+		define("right", Input.KEY_D);
+		define("left", Input.KEY_A);
+		define("up", Input.KEY_W);
+		define("down", Input.KEY_S);
+		define("attack", Input.KEY_ENTER);
 		//Задаём тип сущности, чтобы различать их при обнаружении столкновений
 		addType(PLAYER);
 		//Задаём область для обнаружения столновений
 		setHitBox(0, 0, width, height);
+		//клон хитбокса
+		rect = new Rectangle(0, 0, width, height);
 		}
 	
 	@Override
 	public void update(GameContainer container, int delta) throws SlickException {
 		super.update(container, delta);
+		if(check(LEFT)) {
+			System.out.println("keke");
+		}
 		//пока персонаж жив, его логика обновляется
 		if(isAlive) {
 		//Перемещение
-		if(check(LEFT)&&collide(SOLID, x-2, y)==null) {
+		if(check(LEFT)&&collide(ENEMY, x-2, y)==null) {
 			setAnim(ANIM_LEFT); 
 			x--;
 		}
-		else if(check(RIGHT)&&collide(SOLID, x+width+2, y)==null){
+		else if(check(RIGHT)&&collide(ENEMY, x+2, y)==null){
 			setAnim(ANIM_RIGHT); 
 			x++;
 		}
-		else if(check(UP)&&collide(SOLID, x, y-2)==null) {
+		else if(check(UP)&&collide(ENEMY, x, y-2)==null) {
 			setAnim(ANIM_UP); 
 			y--;
 		}		
-		else if(check(DOWN)&&collide(SOLID, x, y+height+2)==null) {
+		else if(check(DOWN)&&collide(ENEMY, x, y+height+2)==null) {
 			setAnim(ANIM_DOWN); 
 			y++;
 		}
@@ -123,7 +136,7 @@ public class Player extends Entity{
 				}
 				//удар нанесён, устанавливаем кулдаун
 				isCooldown = true;
-				cooldown = 50;
+				cooldown = 20;
 			}
 		}
 		//это условие управляет обновлением кулдауна
@@ -132,6 +145,10 @@ public class Player extends Entity{
 			else isCooldown = false;
 		}
 		}
+		
+
+		rect.setX(x);
+		rect.setY(y);
 	}
 	
 	/**поиск противников вокруг игрока*/
@@ -157,8 +174,8 @@ public class Player extends Entity{
 		enemy.health -= reduced_damage;
 		if(enemy.health>0) enemy.setAnim(ANIM_WOUNDED);
 		else {
-			setAnim(ANIM_DEATH);
-			isAlive = false;
+			enemy.setAnim(ANIM_DEATH);
+			enemy.isAlive = false;
 		}
 	}
 	
@@ -168,5 +185,12 @@ public class Player extends Entity{
 		//чтобы анимации по-умлчнию не зацикливались, это важно
 		animation.setLooping(false);
 		super.addAnimation(animName, animation);
+	}
+	
+	@Override
+	public void render(GameContainer container, Graphics g) throws SlickException {
+		super.render(container, g);
+		g.drawString(""+(int)health, x, y+height);
+		g.draw(rect);
 	}
 }

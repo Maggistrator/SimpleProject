@@ -1,4 +1,7 @@
-package code;
+package ai.strategies;
+
+import core.Strategy;
+import logic.Enemy;
 
 public class PatrolStrategy implements Strategy{
 
@@ -19,7 +22,19 @@ public class PatrolStrategy implements Strategy{
 	
 	@Override
 	public void act() {
+		
+		x = target.x;
+		y = target.y;
+		
 		if(x==maxDist) target.move(minDist, target.y);
-		if(y==minDist) target.move(maxDist, target.y);
+		if(x==minDist) target.move(maxDist, target.y);
+		
+		//если протагонист рядом - атакуем его
+		if(target.cooldown<=0) {
+			target.target = target.checkPlayer();
+			if(target.target!=null) target.hit(target.target);
+			target.cooldown = 50;
+			target.isCooldown = true;
+		}
 	}
 }
